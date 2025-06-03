@@ -25,7 +25,8 @@ from streamlit_autorefresh import st_autorefresh
 try: # Verify connection to Google Sheets
     #st.write("Connecting to Google Sheets...")
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"] 
-    creds = ServiceAccountCredentials.from_json_keyfile_name("moodboard-log-93813e5e100f.json", scope)
+    creds_dict = json.loads(st.secrets["GOOGLE_CREDS_JSON"])
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
     
     #st.write("Connecting to URL...")
