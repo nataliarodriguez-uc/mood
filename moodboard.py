@@ -6,6 +6,7 @@
 ## Requirements: libraries must be run for code to be executed properly.
 import streamlit as st
 import pandas as pd
+import json
 from datetime import datetime, date
 import plotly.express as px
 import gspread
