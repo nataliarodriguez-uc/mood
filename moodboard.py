@@ -132,5 +132,5 @@ try:
         st.info("No data found. Log your first mood today!")
 
 except Exception as e:
-    st.error(f" Backend Loading Error. Try again later.")
+    st.error(f"Backend Loading Error. Try again.")
 
