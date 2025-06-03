@@ -1,0 +1,138 @@
+#MoodBoard Python Code
+
+#Use Instructions as Navigation for Troubleshooting and Verification.
+
+#Python Libraries in Use
+## Requirements: libraries must be run for code to be executed properly.
+import streamlit as st
+import pandas as pd
+from datetime import datetime, date
+import plotly.express as px
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+from streamlit_autorefresh import st_autorefresh
+
+
+# Load Google Sheets Data
+
+## Requirements: Google sheets must already exist and formatted properly. Verify the sheet and column names. 
+## Instructions: 
+# - scope is standard in Google Sheets and should not be changed. 
+# - Only alter creds with the name of the credentials file downloaded from Goodle Drive API.
+# - Use sheets_url to connect to Google Sheet file with URL.
+# - If multiple sheets are used, change sheet1 in sheet to the name of the sheet with Moodboard_LogSheet data. 
+
+try: # Verify connection to Google Sheets
+    #st.write("Connecting to Google Sheets...")
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"] 
+    creds = ServiceAccountCredentials.from_json_keyfile_name("moodboard-log-93813e5e100f.json", scope)
+    client = gspread.authorize(creds)
+    
+    #st.write("Connecting to URL...")
+    sheet_url = "https://docs.google.com/spreadsheets/d/1PCGMvbs-4QKf-enm3PC2e3HOah1lYXTicvsmI6Zuu2g"
+    sheet = client.open_by_url(sheet_url).sheet1
+    
+except Exception as e: # Eject message of connection error
+    st.error(f"Error connecting to Google Sheets. Check moodboard.py Instructions and try again. Error Details:{e}")
+    st.stop()  
+ 
+
+# User Interface Application 
+
+## Requirements: Need streamlit library to run the application. 
+## Instructions: 
+# - Change the title using st.title() as desired. 
+# - Provide the user with different options to log their daily mochi_mood. Note: changing or renaming the options could result in app error and data log. 
+# - Add a text input for users to add additional comments on their mood for the day.
+# - Use the st.button() to submit the mood and note to the Google Sheets document.
+
+st.title("Mochi Health Moodboard Log!") 
+st.markdown("---")
+st.subheader("Your mood is very important to us. ")
+st.write("Use this Moodboard to log your daily mood, add notes and visualize how your mood has changed over time since joining Mochi!")
+mochi_mood = st.selectbox("Select your Mochi-Mood for today:", 
+    [
+    "😊 Feeling Good",
+    "😴 Tired",
+    "😠 Frustrated",
+    "😕 Uncertain",
+    "😢 Sad",
+    "🎉 Motivated",
+    "🥴 Not Feeling Well",
+    "😌 Calm"
+    ])
+
+mochi_note = st.text_input("Add any additional comments on your mood for today:")
+
+if st.button("Submit Mood"):
+    try:
+        # Create a timestamp and append the entry to Google Sheets
+        mood_timestamp = datetime.now().isoformat()
+        sheet.append_row([mood_timestamp, mochi_mood, mochi_note])
+        st.success(" Mood logged successfully! Come back tomorrow to log your next mood!")
+    except Exception as e:
+        st.error(f" Failed to log mood, try again. Error Details:{e}")
+
+
+# Data Visualization on Streamlit
+
+# Requirements: Need pandas, plotly, and gspread libraries for the data visuals. 
+## Instructions: 
+# - Appl will refresh every 60 seconds.
+# - Use the get_all_records() method to retrieve all data from the Google Sheets document.
+# - Check that the dataframe is not empty (contains the headers in order to continue).
+# - mochimood_* contains the dataframe as established for the filters, dates and mood selection for the backend and front end filtering.
+
+try:
+    streamlit_autorefresh = 60000 
+    
+    mochimood_data = sheet.get_all_records()
+    mochimood_df = pd.DataFrame(mochimood_data)
+
+    if not mochimood_df.empty:
+        
+        mochimood_df['timestamp_id'] = pd.to_datetime(mochimood_df['timestamp_id'], errors='coerce')
+        mochimood_date= mochimood_df[mochimood_df['timestamp_id'].dt.date == date.today()]
+        
+        st.markdown("---")
+        st.subheader("See how your Mochi-Mood has changed.")
+        st.write("Select a date range and mood to filter your daily Mochi-Mood log.")
+        
+        mochimood_startdate, mochimood_enddate = st.date_input("Select Date Range:", [date.today(), date.today()])
+        mask = (mochimood_df['timestamp_id'].dt.date >= mochimood_startdate) & (mochimood_df['timestamp_id'].dt.date <= mochimood_enddate)
+        mochimood_filtered = mochimood_df[mask]
+
+        mochimood_moodfilter = mochimood_df['mood'].unique().tolist()
+        mochimood_selectmood = st.multiselect("Select Moods:", options=mochimood_moodfilter, default=mochimood_moodfilter)
+
+        
+        if mochimood_selectmood:
+            mochimood_filtered = mochimood_filtered[mochimood_filtered['mood'].isin(mochimood_selectmood)]
+
+        mood_counts = mochimood_filtered['mood'].value_counts().reset_index()
+        mood_counts.columns = ['Mood', 'Count']
+        
+        if not mood_counts.empty:
+            mood_barplot = px.bar(mood_counts, x='Mood', y='Count', color='Mood',
+                                  title=f"Mood Count from {mochimood_startdate} to {mochimood_enddate}")
+            st.plotly_chart(mood_barplot)
+            
+            
+            if 'note' in mochimood_filtered.columns:
+                st.subheader(" Keep Track of your previous Mochi-Moods")
+                st.write("See your logged moods and notes from the selected date and mood filters!")
+                for index, row in mochimood_filtered.iterrows():
+                    timestamp_str = row['timestamp_id'].strftime('%Y-%m-%d %H:%M')
+                    mood = row['mood']
+                    note = row['note']
+                    st.write(f"- **{timestamp_str}** ({mood}): {note}")
+                    
+        else:
+            st.info("No moods logged for the selected filters.")
+
+    else:
+        st.info("No data found. Log your first mood today!")
+
+except Exception as e:
+    st.error(f" Loading Error. Check Instructions and Try Again! Error Details: {e}")
+
