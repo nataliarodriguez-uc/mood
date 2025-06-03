@@ -3,7 +3,6 @@
 #Use Instructions as Navigation for Troubleshooting and Verification.
 
 #Python Libraries in Use
-## Requirements: libraries must be run for code to be executed properly.
 import streamlit as st
 import pandas as pd
 import json
@@ -16,7 +15,6 @@ from streamlit_autorefresh import st_autorefresh
 
 # Load Google Sheets Data
 
-## Requirements: Google sheets must already exist and formatted properly. Verify the sheet and column names. 
 ## Instructions: 
 # - scope is standard in Google Sheets and should not be changed. 
 # - Only alter creds with the name of the credentials file downloaded from Goodle Drive API.
@@ -35,13 +33,12 @@ try: # Verify connection to Google Sheets
     sheet = client.open_by_url(sheet_url).sheet1
     
 except Exception as e: # Eject message of connection error
-    st.error(f"Error connecting to Google Sheets. Check moodboard.py Instructions and try again. Error Details:{e}")
+    st.error(f"Error connecting to Database. Try Again Later")
     st.stop()  
  
 
 # User Interface Application 
 
-## Requirements: Need streamlit library to run the application. 
 ## Instructions: 
 # - Change the title using st.title() as desired. 
 # - Provide the user with different options to log their daily mochi_mood. Note: changing or renaming the options could result in app error and data log. 
@@ -73,12 +70,11 @@ if st.button("Submit Mood"):
         sheet.append_row([mood_timestamp, mochi_mood, mochi_note])
         st.success(" Mood logged successfully! Come back tomorrow to log your next mood!")
     except Exception as e:
-        st.error(f" Failed to log mood, try again. Error Details:{e}")
+        st.error(f" Failed to log mood, try again.")
 
 
 # Data Visualization on Streamlit
 
-# Requirements: Need pandas, plotly, and gspread libraries for the data visuals. 
 ## Instructions: 
 # - Appl will refresh every 60 seconds.
 # - Use the get_all_records() method to retrieve all data from the Google Sheets document.
@@ -136,5 +132,5 @@ try:
         st.info("No data found. Log your first mood today!")
 
 except Exception as e:
-    st.error(f" Loading Error. Check Instructions and Try Again! Error Details: {e}")
+    st.error(f" Backend Loading Error. Try again later.")
 
